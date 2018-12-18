@@ -878,7 +878,7 @@ namespace dxvk {
             VkDescriptorSet         set,
       const DxvkPipelineLayout*     layout);
 
-    void updateFramebuffer();
+    void updateFramebuffer(bool isDraw);
     
     void updateIndexBufferBinding();
     void updateVertexBufferBindings();
@@ -898,6 +898,8 @@ namespace dxvk {
     void commitComputePostBarriers();
     
     void commitGraphicsPostBarriers();
+
+    bool checkAsyncCompilationCompat();
 
     void emitMemoryBarrier(
             VkPipelineStageFlags      srcStages,

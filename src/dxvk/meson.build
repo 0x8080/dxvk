@@ -70,6 +70,7 @@ dxvk_src = files([
   'dxvk_openvr.cpp',
   'dxvk_options.cpp',
   'dxvk_pipecache.cpp',
+  'dxvk_pipecompiler.cpp',
   'dxvk_pipelayout.cpp',
   'dxvk_pipemanager.cpp',
   'dxvk_query.cpp',
