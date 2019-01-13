@@ -1057,21 +1057,29 @@ namespace dxvk {
     // There are many error conditions, so we'll just assume
     // that we will fail and return a non-zero value in case
     // the device does actually support the format.
+    if (!pNumQualityLevels)
+      return E_INVALIDARG;
+    
     *pNumQualityLevels = 0;
     
-    // We need to check whether the format is 
-    VkFormat format = LookupFormat(Format, DXGI_VK_FORMAT_MODE_ANY).Format;
-    
-    if (format == VK_FORMAT_UNDEFINED) {
-      Logger::err(str::format("D3D11: Unsupported format: ", Format));
-      return E_INVALIDARG;
+    // For some reason, we can query DXGI_FORMAT_UNKNOWN
+    if (Format == DXGI_FORMAT_UNKNOWN) {
+      *pNumQualityLevels = SampleCount == 1 ? 1 : 0;
+      return SampleCount ? S_OK : E_INVALIDARG;
     }
     
-    // D3D may legally query non-power-of-two sample counts as well
+    // All other unknown formats should result in an error return.
+    VkFormat format = LookupFormat(Format, DXGI_VK_FORMAT_MODE_ANY).Format;
+
+    if (format == VK_FORMAT_UNDEFINED)
+      return E_INVALIDARG;
+    
+    // Non-power of two sample counts are not supported, but querying
+    // support for them is legal, so we return zero quality levels.
     VkSampleCountFlagBits sampleCountFlag = VK_SAMPLE_COUNT_1_BIT;
     
     if (FAILED(DecodeSampleCount(SampleCount, &sampleCountFlag)))
-      return E_INVALIDARG;
+      return SampleCount ? S_OK : E_INVALIDARG;
     
     // Check if the device supports the given combination of format
     // and sample count. D3D exposes the opaque concept of quality
@@ -1390,6 +1398,7 @@ namespace dxvk {
     }
     
     if (featureLevel >= D3D_FEATURE_LEVEL_11_0) {
+      enabled.core.features.multiDrawIndirect                     = supported.core.features.multiDrawIndirect;
       enabled.core.features.drawIndirectFirstInstance             = VK_TRUE;
       enabled.core.features.shaderFloat64                         = supported.core.features.shaderFloat64;
       enabled.core.features.shaderInt64                           = supported.core.features.shaderInt64;
@@ -1779,8 +1788,9 @@ namespace dxvk {
     }
 
     if (riid == __uuidof(ID3D10Multithread)) {
-      *ppvObject = ref(m_d3d11Device.GetD3D10Multithread());
-      return S_OK;
+      Com<ID3D11DeviceContext> context;
+      m_d3d11Device.GetImmediateContext(&context);
+      return context->QueryInterface(riid, ppvObject);
     }
     
     if (riid == __uuidof(ID3D11Debug))
